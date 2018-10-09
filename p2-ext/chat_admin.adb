@@ -1,0 +1,115 @@
+with Lower_Layer_UDP;
+with Ada.Strings.Unbounded;
+with Ada.Text_IO;
+with Ada.Exceptions;
+with Ada.Command_line;
+with Chat_Messages;
+with client_collections;
+with Ada.Exceptions;
+with Ada.Strings.Maps;
+
+procedure chat_admin is
+   package LLU renames Lower_Layer_UDP;
+   package ASU renames Ada.Strings.Unbounded;
+   use type ASU.Unbounded_String;
+   package CL renames Ada.Command_line;
+   package CM renames Chat_Messages;
+		 use type CM.Message_Type;
+
+
+  Password: integer;
+  Admin_EP: LLU.End_Point_Type;
+  Server_EP: LLU.End_Point_Type;
+  Mess: CM.Message_Type;
+  Collection_unb : ASU.Unbounded_String;
+  Finish_menu : boolean;
+   Option :ASU.Unbounded_String;
+   Buffer:    aliased LLU.Buffer_Type(1024);
+   Expired : Boolean;
+   NickName: ASU.Unbounded_String; 
+	
+  Procedure Show_Menu is
+
+  begin
+	Ada.Text_IO.Put_Line ("Options");
+	Ada.Text_IO.Put_Line ("1 Show writers collection");
+	Ada.Text_IO.Put_Line ( "2 Ban writer");
+	Ada.Text_IO.Put_Line ( "3 Shutdown server");
+	Ada.Text_IO.Put_Line ( "4 Quit");
+ end Show_Menu;	
+
+
+  begin
+
+      Password := (Integer'value(CL.Argument(3)));
+	  -- Construye el End_Point en el que está atado el servidor
+           Server_EP := LLU.Build(LLU.To_IP(CL.Argument(1)), Integer'Value (CL.Argument(2)));
+	   -- Construye un End_Point libre cualquiera y se ata a él
+           LLU.Bind_Any(Admin_EP);
+
+
+
+        
+    Finish_menu := False;
+
+	   while not Finish_Menu loop
+	   show_menu;
+	   Ada.Text_IO.Put("your option? ");
+       Option := ASU.To_Unbounded_String(Ada.Text_IO.Get_Line);
+	    if option = "1" then
+                LLU.Reset(Buffer);
+				Mess := CM.Collection_Request;
+		        CM.Message_Type'Output(Buffer'Access, Mess);
+				LLU.End_Point_Type'Output(Buffer'Access, Admin_EP);
+				integer'Output(Buffer'Access, Password);
+                 LLU.Send(Server_EP, Buffer'Access);
+
+				 LLU.Reset(Buffer);
+				 	 LLU.Receive(Admin_EP, Buffer'Access, 10.0, Expired);
+					   if Expired then
+						  Ada.Text_IO.Put_Line ("Plazo expirado");
+					   else
+						  -- saca Collection Data    
+						  Mess := CM.Message_type'Input(Buffer'Access);
+						  Collection_unb:= ASU.Unbounded_String'Input(Buffer'Access);
+			              Ada.Text_IO.Put_Line (  ASU.To_String( Collection_unb));
+						  LLU.Reset(Buffer);
+					   end if;
+
+	    elsif option = "2" then
+		   LLU.Reset(Buffer);
+           Mess := CM.Ban;
+		   CM.Message_Type'Output(Buffer'Access, Mess);
+		   integer'Output(Buffer'Access, Password);
+		   Ada.Text_IO.Put("Nick to ban? ");
+		   NickName:= ASU.To_Unbounded_String(Ada.Text_IO.Get_Line);
+		   ASU.Unbounded_String'Output(Buffer'Access, NickName);
+           LLU.Send(Server_EP, Buffer'Access);          
+       elsif  option = "3" then
+           LLU.Reset(Buffer);
+		   Mess := CM.Shutdown;
+		   CM.Message_Type'Output(Buffer'Access, Mess);
+		   integer'Output(Buffer'Access, Password);
+           LLU.Send(Server_EP, Buffer'Access); 	
+       elsif  option = "4" then
+        		 Finish_Menu:=True;
+			 -- termina Lower_Layer_UDP
+                           LLU.Finalize;
+            else
+                 Ada.Text_IO.Put_Line("opcion no valida");
+	    end if;
+   end loop; 
+ 
+
+
+end chat_admin;
+
+
+
+
+
+
+
+
+
+
