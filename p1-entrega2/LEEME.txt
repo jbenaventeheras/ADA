@@ -1,0 +1,3 @@
+entrego esta segunda version con el deleted modificado para que si no esxiste la palabra en la lista 
+no diga que la ha borrado. Lo unico que no he logrado ajustar seria cuando se inicia con ,/word -i
+ jfsdk (no existe archivo) ya que se me sale con Name_Error.
